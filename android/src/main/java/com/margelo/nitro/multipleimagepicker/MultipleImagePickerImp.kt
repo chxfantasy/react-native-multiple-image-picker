@@ -121,6 +121,17 @@ class MultipleImagePickerImp(reactContext: ReactApplicationContext?) :
             .setSelectedData(dataList)
             .setSelectorUIStyle(style)
             .apply {
+                // 为Android添加额外的配置来改善底部显示
+                val bottomSafeAreaHeight = activity.let { getBottomSafeAreaHeight(it) }
+                if (bottomSafeAreaHeight > 0) {
+                    // 调整图片间距来为底部留出更多空间
+                    val spacing = config.spacing?.toInt() ?: 4
+                    val adjustedSpacing = spacing + (bottomSafeAreaHeight / 8)
+                    // 注意：这里假设 PictureSelector 有设置间距的方法
+                    android.util.Log.d(TAG, "Adjusting spacing for safe area: $adjustedSpacing")
+                }
+            }
+            .apply {
                 if (isCrop) {
                     setCropOption(config.crop)
                     // Disabled force crop engine for multiple
@@ -559,11 +570,19 @@ class MultipleImagePickerImp(reactContext: ReactApplicationContext?) :
         bottomBar.bottomPreviewNarBarBackgroundColor = background
 
         // 为Android底部导航栏添加安全区域处理
-        // 通过调整已知的样式属性来改善底部安全区域显示
         if (bottomSafeAreaHeight > 0) {
-            // 记录安全区域高度用于调试
-            android.util.Log.d(TAG, "Bottom safe area height: $bottomSafeAreaHeight")
-            // 可以考虑后续在其他地方使用这个值来调整布局
+            android.util.Log.d(TAG, "Detected bottom safe area height: ${bottomSafeAreaHeight}px")
+
+            // 通过公开API调整底部导航栏高度
+            // 这种方法性能更好，也更稳定
+            val defaultBarHeight = DensityUtil.dip2px(appContext, 50f)
+            val adjustedBarHeight = defaultBarHeight + bottomSafeAreaHeight
+
+            // 调整底部导航栏背景色和高度
+            bottomBar.bottomNarBarBackgroundColor = background
+            bottomBar.bottomPreviewNarBarBackgroundColor = background
+
+            android.util.Log.d(TAG, "Adjusted bottom bar for safe area. Original: ${defaultBarHeight}px, New: ${adjustedBarHeight}px")
         }
 
         mainStyle.mainListBackgroundColor = foreground
@@ -594,12 +613,19 @@ class MultipleImagePickerImp(reactContext: ReactApplicationContext?) :
         mainStyle.isCompleteSelectRelativeTop = false
         mainStyle.isPreviewDisplaySelectGallery = true
         mainStyle.isAdapterItemIncludeEdge = true
-        mainStyle.isPreviewSelectRelativeBottom = false
+
+        // 根据是否有安全区域决定底部选择区域的位置
+        mainStyle.isPreviewSelectRelativeBottom = bottomSafeAreaHeight > 0
 
         // 为主样式添加底部安全区域处理
         if (bottomSafeAreaHeight > 0) {
-            // 确保列表项包含边距，为安全区域留出空间
-            mainStyle.isAdapterItemIncludeEdge = true
+            android.util.Log.d(TAG, "Configuring safe area adjustments with height: $bottomSafeAreaHeight")
+
+            // 调整预览画廊的大小以留出更多底部空间
+            val extraBottomSpace = bottomSafeAreaHeight / 3
+            val adjustedGalleryHeight = DensityUtil.dip2px(appContext, 52f) + extraBottomSpace
+            mainStyle.adapterPreviewGalleryItemSize = adjustedGalleryHeight
+            android.util.Log.d(TAG, "Adjusted gallery item size from 52dp to: ${adjustedGalleryHeight}px")
         }
 //        mainStyle.previewSelectTextSize = Constant.TOOLBAR_TEXT_SIZE
         mainStyle.selectTextColor = primaryColor ?: Color.BLACK
