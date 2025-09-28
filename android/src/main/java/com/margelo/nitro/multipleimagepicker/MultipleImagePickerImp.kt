@@ -315,13 +315,42 @@ class MultipleImagePickerImp(reactContext: ReactApplicationContext?) :
 
         val previewStyle = PictureSelectorStyle()
         val titleBarStyle = TitleBarStyle()
+        val previewBottomBarStyle = BottomNavBarStyle()
+        val previewMainStyle = SelectMainStyle()
 
         previewStyle.windowAnimationStyle.setActivityEnterAnimation(R.anim.anim_modal_in)
         previewStyle.windowAnimationStyle.setActivityExitAnimation(com.luck.picture.lib.R.anim.ps_anim_modal_out)
-        previewStyle.selectMainStyle.previewBackgroundColor = Color.BLACK
 
+        // 配置预览页面的主样式
+        previewMainStyle.previewBackgroundColor = Color.BLACK
+        previewMainStyle.isPreviewSelectNumberStyle = true  // 显示选择数字
+        previewMainStyle.isSelectNumberStyle = true
+        previewMainStyle.selectBackground = R.drawable.picture_selector  // 显示选择框
+        previewMainStyle.previewSelectBackground = R.drawable.picture_selector
+
+        // 配置预览页面的标题栏
         titleBarStyle.previewTitleBackgroundColor = Color.BLACK
+        titleBarStyle.isHideCancelButton = false  // 显示取消按钮
+
+        // 配置预览页面的底部栏，修复"完成"按钮显示
+        previewBottomBarStyle.isCompleteCountTips = true  // 显示数量提示
+        previewBottomBarStyle.bottomPreviewNormalTextColor = Color.WHITE
+        previewBottomBarStyle.bottomPreviewSelectTextColor = Color.WHITE
+        previewBottomBarStyle.bottomNarBarBackgroundColor = Color.BLACK
+        previewBottomBarStyle.bottomPreviewNarBarBackgroundColor = Color.BLACK
+
+        // 为预览页面也添加安全区域处理
+        val activity = reactApplicationContext.currentActivity
+        val previewBottomSafeAreaHeight = activity?.let { getBottomSafeAreaHeight(it) } ?: 0
+        if (previewBottomSafeAreaHeight > 0) {
+            // 调整预览页面的底部样式以适应安全区域
+            previewMainStyle.isPreviewSelectRelativeBottom = true
+            android.util.Log.d(TAG, "Applied safe area to preview page: ${previewBottomSafeAreaHeight}px")
+        }
+
         previewStyle.titleBarStyle = titleBarStyle
+        previewStyle.bottomBarStyle = previewBottomBarStyle
+        previewStyle.selectMainStyle = previewMainStyle
 
         media.withIndex().forEach { (index, mediaItem) ->
 
@@ -621,11 +650,14 @@ class MultipleImagePickerImp(reactContext: ReactApplicationContext?) :
         if (bottomSafeAreaHeight > 0) {
             android.util.Log.d(TAG, "Configuring safe area adjustments with height: $bottomSafeAreaHeight")
 
-            // 调整预览画廊的大小以留出更多底部空间
-            val extraBottomSpace = bottomSafeAreaHeight / 3
+            // 调整预览画廊的大小以留出更多底部空间，增加更多边距
+            val extraBottomSpace = bottomSafeAreaHeight  // 使用完整的安全区域高度
             val adjustedGalleryHeight = DensityUtil.dip2px(appContext, 52f) + extraBottomSpace
             mainStyle.adapterPreviewGalleryItemSize = adjustedGalleryHeight
             android.util.Log.d(TAG, "Adjusted gallery item size from 52dp to: ${adjustedGalleryHeight}px")
+
+            // 强制底部选择区域相对定位，为安全区域留出空间
+            mainStyle.isPreviewSelectRelativeBottom = true
         }
 //        mainStyle.previewSelectTextSize = Constant.TOOLBAR_TEXT_SIZE
         mainStyle.selectTextColor = primaryColor ?: Color.BLACK
