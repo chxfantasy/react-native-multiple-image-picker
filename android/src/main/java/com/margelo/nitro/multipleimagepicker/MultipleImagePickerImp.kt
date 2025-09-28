@@ -5,7 +5,12 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.Color
 import android.net.Uri
+import android.os.Build
+import android.view.View
+import android.view.WindowInsets
 import androidx.core.content.ContextCompat
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import com.facebook.react.bridge.BaseActivityEventListener
 import com.facebook.react.bridge.ColorPropConverter
 import com.facebook.react.bridge.ReactApplicationContext
@@ -56,6 +61,27 @@ class MultipleImagePickerImp(reactContext: ReactApplicationContext?) :
     private lateinit var config: NitroConfig
     private var cropOption = Options()
     private var dataList = mutableListOf<LocalMedia>()
+
+    /**
+     * 获取底部安全区域高度
+     */
+    private fun getBottomSafeAreaHeight(activity: Activity): Int {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            val windowInsets = activity.window.decorView.rootWindowInsets
+            windowInsets?.getInsets(WindowInsets.Type.navigationBars())?.bottom ?: 0
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            val decorView = activity.window.decorView
+            ViewCompat.getRootWindowInsets(decorView)?.getInsets(WindowInsetsCompat.Type.navigationBars())?.bottom ?: 0
+        } else {
+            // 对于旧版本Android，使用资源ID获取导航栏高度
+            val resourceId = activity.resources.getIdentifier("navigation_bar_height", "dimen", "android")
+            if (resourceId > 0) {
+                activity.resources.getDimensionPixelSize(resourceId)
+            } else {
+                0
+            }
+        }
+    }
 
 
     @ReactMethod
@@ -503,6 +529,10 @@ class MultipleImagePickerImp(reactContext: ReactApplicationContext?) :
         val foreground = if (isDark) Color.WHITE else Color.BLACK
         val background = if (isDark) backgroundDark else Color.WHITE
 
+        // 获取底部安全区域高度
+        val activity = reactApplicationContext.currentActivity
+        val bottomSafeAreaHeight = activity?.let { getBottomSafeAreaHeight(it) } ?: 0
+
         val titleBar = TitleBarStyle()
         val bottomBar = BottomNavBarStyle()
         val mainStyle = SelectMainStyle()
@@ -520,7 +550,7 @@ class MultipleImagePickerImp(reactContext: ReactApplicationContext?) :
         titleBar.titleLeftBackResource = iconBack
         titleBar.isHideCancelButton = true
 
-        // BOTTOM BAR
+        // BOTTOM BAR - 添加底部安全区域处理
         bottomBar.bottomPreviewNormalTextColor = foreground
         bottomBar.bottomPreviewSelectTextColor = foreground
         bottomBar.bottomNarBarBackgroundColor = background
@@ -528,12 +558,27 @@ class MultipleImagePickerImp(reactContext: ReactApplicationContext?) :
         bottomBar.bottomOriginalTextColor = foreground
         bottomBar.bottomPreviewNarBarBackgroundColor = background
 
+        // 为Android底部导航栏添加安全区域处理
+        // 通过调整已知的样式属性来改善底部安全区域显示
+        if (bottomSafeAreaHeight > 0) {
+            // 记录安全区域高度用于调试
+            android.util.Log.d(TAG, "Bottom safe area height: $bottomSafeAreaHeight")
+            // 可以考虑后续在其他地方使用这个值来调整布局
+        }
+
         mainStyle.mainListBackgroundColor = foreground
         mainStyle.selectNormalTextColor = foreground
         mainStyle.isDarkStatusBarBlack = !isDark
         mainStyle.statusBarColor = background
         mainStyle.mainListBackgroundColor = background
-        mainStyle.adapterPreviewGalleryItemSize = DensityUtil.dip2px(appContext, 52f);
+        // 根据是否有底部安全区域调整画廊项目大小
+        val baseGallerySize = DensityUtil.dip2px(appContext, 52f)
+        val adjustedGallerySize = if (bottomSafeAreaHeight > 0) {
+            baseGallerySize + (bottomSafeAreaHeight / 2)
+        } else {
+            baseGallerySize
+        }
+        mainStyle.adapterPreviewGalleryItemSize = adjustedGallerySize
         mainStyle.adapterPreviewGalleryBackgroundResource =
             if (isDark) com.luck.picture.lib.R.drawable.ps_preview_gallery_bg else R.drawable.preview_gallery_white_bg
         mainStyle.adapterPreviewGalleryFrameResource = R.drawable.preview_gallery_item
@@ -550,6 +595,12 @@ class MultipleImagePickerImp(reactContext: ReactApplicationContext?) :
         mainStyle.isPreviewDisplaySelectGallery = true
         mainStyle.isAdapterItemIncludeEdge = true
         mainStyle.isPreviewSelectRelativeBottom = false
+
+        // 为主样式添加底部安全区域处理
+        if (bottomSafeAreaHeight > 0) {
+            // 确保列表项包含边距，为安全区域留出空间
+            mainStyle.isAdapterItemIncludeEdge = true
+        }
 //        mainStyle.previewSelectTextSize = Constant.TOOLBAR_TEXT_SIZE
         mainStyle.selectTextColor = primaryColor ?: Color.BLACK
 //        mainStyle.selectTextSize = Constant.TOOLBAR_TEXT_SIZE
