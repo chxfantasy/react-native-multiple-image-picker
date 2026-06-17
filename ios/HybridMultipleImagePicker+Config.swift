@@ -155,6 +155,8 @@ extension HybridMultipleImagePicker {
             config.statusBarStyle = .darkContent
             config.appearanceStyle = .normal
             config.photoList.bottomView.barStyle = barStyle
+            // binkoo patch: 给主网格底栏设实底色，避免浅色主题下半透明底栏显得"悬空"
+            config.photoList.bottomView.backgroundColor = background
             config.navigationBarStyle = barStyle
             config.previewView.bottomView.barStyle = barStyle
             config.previewView.backgroundColor = background

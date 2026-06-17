@@ -34,16 +34,27 @@ public class PhotoCancelItem: UIView, PhotoNavigationItem {
     func initView() {
         button = UIButton(type: .custom)
     
-        button.setImage(UIImage.close, for: .normal)
+        // binkoo patch: clean SF Symbol X (no circle), dark tint for light theme
+        let symbolConfig = UIImage.SymbolConfiguration(pointSize: 18, weight: .medium)
+        button.setImage(UIImage(systemName: "xmark", withConfiguration: symbolConfig), for: .normal)
+        button.tintColor = .black
         
         button.addTarget(self, action: #selector(didCancelClick), for: .touchUpInside)
         
         addSubview(button)
         
-        if let btnSize = button.currentImage?.size {
-            button.size = btnSize
-            size = btnSize
-        }
+        // binkoo patch: 用标准 44×44 让自定义视图填满 iOS 26 的玻璃壳，并显式居中，避免 X 偏移
+        let itemSize = CGSize(width: 44, height: 44)
+        button.contentHorizontalAlignment = .center
+        button.contentVerticalAlignment = .center
+        button.size = itemSize
+        size = itemSize
+    }
+
+    public override func layoutSubviews() {
+        super.layoutSubviews()
+        // 兜底：宿主重新布局时把按钮拉满本视图，保证 X 始终居中
+        button.frame = bounds
     }
     
     @objc

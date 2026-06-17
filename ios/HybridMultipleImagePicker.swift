@@ -85,6 +85,9 @@ class HybridMultipleImagePicker: HybridMultipleImagePickerSpec {
 
             } cancel: { cancel in
                 cancel.autoDismiss = true
+                // binkoo patch: settle the JS promise on cancel (upstream 2.2.5 leaves it
+                // pending forever). Resolve with [] so pickMedia() treats cancel as "no selection".
+                resolved([])
             }
         }
     }
